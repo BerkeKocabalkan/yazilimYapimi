@@ -46,11 +46,6 @@
     <!-- Sweet Alert -->
     <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 
-    <script>
-    $( document ).ready(function() {
-   
-  });
-    </script>
 
 
 </head>
@@ -92,7 +87,9 @@
             <ul class="navbar-nav">
                 <li class="nav-item"> <a class="nav-link" href="index.php"> Ana Sayfa </a> </li>
                 
-                <li class="nav-item"> <a class="nav-link" href="onay.php"> Onay </a> </li>
+                <?php if ($oturumCek['kullaniciYetki']=="1") {
+                  echo('<li class="nav-item"> <a class="nav-link" href="onay.php"> Onay </a> </li>');
+                 } ?>
 
                 <li class="nav-item"> 
                   <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModalUrunEkle">
