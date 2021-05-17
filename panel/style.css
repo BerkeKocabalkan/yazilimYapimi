@@ -1,0 +1,28 @@
+/* ============ desktop view ============ */
+@media all and (min-width: 992px) {
+	.navbar .nav-item .dropdown-menu{ display: none; }
+	.navbar .nav-item:hover .nav-link{ color: #fff;  }
+	.navbar .nav-item:hover .dropdown-menu{ display: block; }
+	.navbar .nav-item .dropdown-menu{ margin-top:0; }
+}	
+/* ============ desktop view .end// ============ */
+
+
+.content-div{
+	background-color:#ECEDF0;
+	border-radius: 25px;
+}
+.tablo{
+	background-color:White;
+	border-radius: 5px;
+}
+.btn-xs{
+	padding:1px 5px;
+	font-size:12px;
+	line-height:1.5;
+	border-radius:3px;
+}
+.baslik{
+	float: left;
+	margin-right: 10px;
+}

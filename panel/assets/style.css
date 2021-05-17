@@ -1,0 +1,31 @@
+.borderBottom{
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+}
+.borderRight{
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+}
+.mr-10{
+    margin-top: -20px;
+}
+.mt8{
+    margin-top: 8px;
+}
+.bg-white{
+    background-color: white;
+}
+.pb3{
+    padding-bottom: 20px;
+}
+.pt3{
+    padding-top: 20px;
+}
+.vh100{
+    height: 200px;
+}
+.a-link{
+    text-decoration: none;
+}
+.a-link:hover{
+    text-decoration: none;
+}
+
