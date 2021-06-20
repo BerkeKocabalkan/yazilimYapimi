@@ -5,6 +5,11 @@
   LEFT JOIN urun ON urun.urunId=kullaniciurun.urunId
   WHERE kullaniciurunMiktar>0 and kullaniciurunOnay='1'");
   $urunSor->execute(array());
+
+  $siparisSor=$db->prepare("SELECT * FROM siparis
+  LEFT JOIN urun ON urun.urunId=siparis.urunId
+  WHERE siparisDurum='0'");
+  $siparisSor->execute(array());
 ?>
 
   <div class="container-flued m-5">
@@ -37,8 +42,12 @@
                             </div> 
                             <div class="form-group">
                               <label>Miktar</label>
-                              <input type="number" class="form-control" name="urunAdet" placeholder="Miktar Girin">
-                            </div>                      
+                              <input type="number" class="form-control" name="urunMiktar" required placeholder="Miktar Girin">
+                            </div>           
+                            <div class="form-group">
+                              <label>Miktar</label>
+                              <input type="number" class="form-control" name="urunFiyat" required placeholder="Miktar Girin">
+                            </div>             
                           
                         </div>
                         <div class="modal-footer">
@@ -70,6 +79,39 @@
               <td><?php echo $urunCek['urunAd'] ?></td>
               <td><?php echo $urunCek['kullaniciurunMiktar'] ?></td>
               <td><?php echo $urunCek['kullaniciurunFiyat'] ?></td>
+            </tr>
+            <?php } ?>
+          </tbody>
+        </table>
+        
+      </div>
+    </div>
+  </div>
+
+  <div class="container-flued m-5">
+    <div class="row">
+      <div class="col-12 content-div p-3">
+        <h4 class="baslik">Aktif Siparişler</h4>
+        <br>
+        <hr>
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Ürün Adı</th>
+              <th scope="col">Miktar</th>
+              <th scope="col">Fiyat</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php
+                $say=0;
+                while($siparisCek=$siparisSor->fetch(PDO::FETCH_ASSOC)) { $say++; ?>
+            <tr>
+              <th scope="row"><?php echo $say ?></th>
+              <td><?php echo $siparisCek['urunAd'] ?></td>
+              <td><?php echo $siparisCek['kullaniciurunMiktar'] ?></td>
+              <td><?php echo $siparisCek['kullaniciurunFiyat'] ?></td>
             </tr>
             <?php } ?>
           </tbody>

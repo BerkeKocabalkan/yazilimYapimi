@@ -47,7 +47,6 @@
     <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 
 
-
 </head>
 <body>
 <form>
@@ -90,8 +89,10 @@
                 <?php if ($oturumCek['kullaniciYetki']=="1") {
                   echo('<li class="nav-item"> <a class="nav-link" href="onay.php"> Onay </a> </li>');
                  } ?>
+                  
 
-                <li class="nav-item"> 
+
+                  <li class="nav-item"> 
                   <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModalUrunEkle">
                     Ürün Ekle
                   </button>
@@ -152,7 +153,16 @@
                             <div class="form-group">
                               <label>Para</label>
                               <input type="number" class="form-control" id="bakiyePara" placeholder="Miktar Girin">
-                            </div>                   
+                            </div>          
+                            <div class="form-group">
+                              <label>Kur</label>
+                              <select class="form-control" name="bakiyeKur" id="bakiyeKur">
+                                <option value="0">TL</option>
+                                <option value="1">Dolar</option>
+                                <option value="2">Euro</option>
+                                <option value="3">Frank</option>
+                              </select>
+                            </div>             
                           </form>
                         </div>
                         <div class="modal-footer">
@@ -195,6 +205,42 @@
                     </div>
                   </div> 
                 </li>
+
+                <li class="nav-item"> 
+                  <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModalRapor">
+                    Rapor
+                  </button>
+
+                  <!-- Modal -->
+                  <div class="modal fade" id="exampleModalRapor" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title" id="exampleModalLabel">Rapor</h5>
+                          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                          </button>
+                        </div>
+                        <form action="../netting/process.php" method="POST">
+                          <div class="modal-body">
+                            
+                              <div class="form-group">
+                                <label>Tarih Aralığı</label>
+                                <input type="date" class="form-control" name="basTarih">
+                                <br>
+                                <input type="date" class="form-control" name="bitTarih">
+                              </div>                   
+                            
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Kapat</button>
+                            <input id="urunEkleBtn" type="submit" class="btn btn-primary" value="Rapor Al"></input>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div> 
+                </li>
                 
             </ul>
            
@@ -227,15 +273,17 @@
           });
 	    });
 
-      $('#bakiyeEkleBtn').on('click', function() {kullaniciId
+      $('#bakiyeEkleBtn').on('click', function() {
           var bakiyePara = $('#bakiyePara').val();
           var kullaniciId = $('#kullaniciId').val();
+          var bakiyeKur = $('#bakiyeKur').val();
           $.ajax({
             url: "../netting/islem.php",
             type: "POST",
             data: {
               bakiyePara: bakiyePara,
               kullaniciId: kullaniciId,
+              bakiyeKur: bakiyeKur,
               bakiyeEkle: "1"
             },
             success : function(guncelle){
@@ -265,10 +313,13 @@
               kullaniciUrunEkle: "1"
             },
             success : function(guncelle){
+              $('.modal').modal("hide");
+
               if (guncelle.trim() == "hata") {
                 sweetAlert('Hata',"Bir hata oluştu","error");
               }else if(guncelle.trim() == "ok") {
-                $('.modal').modal("hide");
+                sweetAlert('Başarılı',"İşlem Başarılı","success");
+              }else if(guncelle.trim() == "ok") {
                 sweetAlert('Başarılı',"İşlem Başarılı","success");
               }
             }

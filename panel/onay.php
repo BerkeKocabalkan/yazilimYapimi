@@ -34,7 +34,18 @@
                 while($bakiyeCek=$bakiyeSor->fetch(PDO::FETCH_ASSOC)) { $say++; ?>
                     <tr>
                     <th scope="row"><?php echo $say ?></th>
-                    <td><?php echo $bakiyeCek['kullaniciTakmaAd']." Adlı kullanıcı ".$bakiyeCek['bakiyePara']."TL bakiye talep ediyor." ?></td>
+                    <?php 
+                      if ($bakiyeCek["bakiyeKur"]==1) {
+                          $kur = "Dolar";
+                      }elseif ($bakiyeCek["bakiyeKur"]==2) {
+                          $kur = "Euro";
+                      }elseif ($bakiyeCek["bakiyeKur"]==3) {
+                          $kur = "Frank";
+                      }elseif ($bakiyeCek["bakiyeKur"]==0) {
+                          $kur = "TL";
+                      }
+                    ?>
+                    <td><?php echo $bakiyeCek['kullaniciTakmaAd']." Adlı kullanıcı ".$bakiyeCek['bakiyePara'].$kur." bakiye talep ediyor." ?></td>
                     <td><center>
                         <a href="../netting/islem.php?bakiyeId=<?php echo $bakiyeCek['bakiyeId']; ?>&bakiyeOnayla=ok&kullaniciId=<?php echo $bakiyeCek['kullaniciId']; ?>"><button class="btn btn-success btn-s">Onayla</button></a>
                         <a href="../netting/islem.php?bakiyeId=<?php echo $bakiyeCek['bakiyeId']; ?>&bakiyeOnayla=no&kullaniciId=<?php echo $bakiyeCek['kullaniciId']; ?>"><button class="btn btn-danger btn-s">Sil</button></a>

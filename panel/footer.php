@@ -27,8 +27,12 @@
           sweetAlert('Başarılı',"İşlem Başarılı","success");
         }else if(durum=="no"){
           sweetAlert('Hata',"Bir hata oluştu","error");
-        }else if(durum=="yetersiz"){
-          sweetAlert('Hata',"Alınabilecek olan kadar ürün aldınız","error");
+        }else if(durum=="sipariş"){
+          sweetAlert('Başarılı',"Siparişiniz Başarılı","success");
+        }else if(durum=="alım"){
+          sweetAlert('Başarılı',"Siparişinizin alım işlemi gerçekleşmiştir","success");
+        }else if(durum=="satım"){
+          sweetAlert('Başarılı',"Satışınız yapılmıştır","success");
         }
       });
     });

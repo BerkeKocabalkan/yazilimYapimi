@@ -106,12 +106,14 @@ if(isset($_POST['bakiyeEkle'])){
 
     $bakiyeEkle=$db->prepare("INSERT INTO bakiye SET
         kullaniciId=:kullaniciId,
-        bakiyePara=:bakiyePara
+        bakiyePara=:bakiyePara,
+        bakiyeKur=:bakiyeKur
     ");
 
     $insert=$bakiyeEkle->execute(array(
         'kullaniciId' => $_POST['kullaniciId'],
-        'bakiyePara' => $_POST['bakiyePara']
+        'bakiyePara' => $_POST['bakiyePara'],
+        'bakiyeKur' => $_POST['bakiyeKur']
     ));
 
     if ($insert) {
@@ -138,20 +140,18 @@ if(isset($_POST['kullaniciUrunEkle'])){
     ");
 
     $insert=$bakiyeEkle->execute(array(
-        'kullaniciId' => $_POST['kullaniciId'],
+        'kullaniciId' => $_SESSION['oturumId'],
         'urunId' => $_POST['urunId'],
         'kullaniciurunMiktar' => $_POST['kullaniciurunMiktar'],
         'kullaniciurunFiyat' => $_POST['kullaniciurunFiyat']
     ));
 
     if ($insert) {
+        echo "ok";  
+    }else {
+        echo "hata";
+    } 
 
-		echo "ok";
-
-	} else {
-
-		echo "hata";
-	}
 }
 
 //Kullanıcı Ürün Ekle Bitiş
@@ -180,7 +180,19 @@ if (isset($_GET['bakiyeOnayla'])) {
             ));
             $bakiyeCek=$bakiyeSor->fetch(PDO::FETCH_ASSOC);  
 
-            $yeniBakiye = $bakiyeCek["kullaniciPara"]+$bakiyeCek["bakiyePara"];
+            $connect_web = simplexml_load_file('http://www.tcmb.gov.tr/kurlar/today.xml');
+
+            if ($bakiyeCek["bakiyeKur"]==1) {
+                $kur = $connect_web->Currency[0]->BanknoteBuying;
+            }elseif ($bakiyeCek["bakiyeKur"]==2) {
+                $kur = $connect_web->Currency[3]->BanknoteBuying;
+            }elseif ($bakiyeCek["bakiyeKur"]==3) {
+                $kur = $connect_web->Currency[5]->BanknoteBuying;
+            }elseif ($bakiyeCek["bakiyeKur"]==0) {
+                $kur = 1;
+            }
+
+            $yeniBakiye = $bakiyeCek["kullaniciPara"]+($bakiyeCek["bakiyePara"]*$kur);
 
 
             $bakiyeDuzenle=$db->prepare("UPDATE kullanici SET
@@ -229,7 +241,95 @@ if (isset($_GET['kullaniciurunOnayla'])) {
         $islem=$kaydet->execute(array(
             'kullaniciurunOnay' => 1
         )); 
-        
+
+        $urunSor=$db->prepare("SELECT * FROM kullaniciurun
+        LEFT JOIN kullanici ON kullaniciurun.kullaniciId=kullanici.kullaniciId
+        WHERE kullaniciurunId=:kullaniciurunId");
+        $urunSor->execute(array(
+            'kullaniciurunId'=> $kullaniciurunId
+        ));
+
+        $urunCek=$urunSor->fetch(PDO::FETCH_ASSOC);
+
+
+        $siparisSor=$db->prepare("SELECT * FROM siparis
+            LEFT JOIN kullanici ON siparis.kullaniciId=kullanici.kullaniciId
+            WHERE urunId=:urunId AND kullaniciurunMiktar<=:kullaniciurunMiktar AND kullaniciurunFiyat=:kullaniciurunFiyat AND siparisDurum=:siparisDurum
+            ORDER BY kullaniciurunFiyat ASC"
+        );
+
+        $siparisSor->execute(array(
+            'urunId'=> $urunCek['urunId'],
+            'kullaniciurunMiktar'=> $urunCek['kullaniciurunMiktar'],
+            'kullaniciurunFiyat'=> $urunCek['kullaniciurunFiyat'],
+            'siparisDurum'=> 0
+        ));
+
+        $siparisCek=$siparisSor->fetch(PDO::FETCH_ASSOC);  
+        $say=$siparisSor->rowCount();
+        $adet=$siparisCek['kullaniciurunMiktar'];
+        $odenen=0;
+        if ($say>0) {
+
+            $sonMiktar=$urunCek['kullaniciurunMiktar']-$adet;
+            $odenen=$adet*$urunCek['kullaniciurunFiyat'];
+            $adet=0;
+
+
+            $duzenle=$db->prepare("UPDATE kullaniciurun SET
+                kullaniciurunMiktar=:kullaniciurunMiktar
+                WHERE kullaniciurunId={$urunCek['kullaniciurunId']}"
+            );
+            
+            $islem=$duzenle->execute(array(
+                'kullaniciurunMiktar' => $sonMiktar
+            ));
+
+            $duzenle2=$db->prepare("UPDATE siparis SET
+                siparisDurum=:siparisDurum
+                WHERE siparisId={$siparisCek['siparisId']}"
+            );
+            
+            $islem2=$duzenle2->execute(array(
+                'siparisDurum' => 1
+            ));
+
+            if ($islem2) {
+
+                $aliciPara=$siparisCek['kullaniciPara'];
+                $saticiPara=$urunCek['kullaniciPara'];
+
+                $sonAliciPara=$aliciPara-$odenen;
+                $sonSaticiPara=$saticiPara+$odenen;
+                    
+                $duzenle3=$db->prepare("UPDATE kullanici SET
+                    kullaniciPara=:kullaniciPara
+                    WHERE kullaniciId={$siparisCek['kullaniciId']}"
+                );
+                
+                $islem3=$duzenle3->execute(array(
+                    'kullaniciPara' => $sonAliciPara
+                ));
+
+                $duzenle4=$db->prepare("UPDATE kullanici SET
+                    kullaniciPara=:kullaniciPara
+                    WHERE kullaniciId={$urunCek['kullaniciId']}"
+                );
+                
+                $islem4=$duzenle4->execute(array(
+                    'kullaniciPara' => $sonSaticiPara
+                ));
+
+                if($islem4){
+                    header("Location:../panel/onay.php?durum=ok");
+                } else {
+                    header("Location:../panel/onay.php?durum=no");
+                }
+
+            }else {
+                header("Location:../panel/onay.php?durum=no");
+            }      
+        }
     }elseif ($_GET['kullaniciurunOnayla']=="no") {
         
         $kullaniciurunSil=$db->prepare("DELETE FROM kullaniciurun WHERE kullaniciurunId={$kullaniciurunId}");
@@ -243,6 +343,7 @@ if (isset($_GET['kullaniciurunOnayla'])) {
         header("Location:../panel/onay.php?durum=no");
     }
 
+    
 }
 
 //Kullanici Ürün Onay Bitiş
@@ -252,113 +353,131 @@ if (isset($_GET['kullaniciurunOnayla'])) {
 
 if (isset($_POST['urunSatınAl'])) {
 
-    $adet=$_POST['urunAdet'];
+    $siparisEkle=$db->prepare("INSERT INTO siparis SET
+        kullaniciId=:kullaniciId,
+        urunId=:urunId,
+        kullaniciurunMiktar=:urunMiktar,
+        kullaniciurunFiyat=:urunFiyat
+    ");
 
-    while ($adet!=0) {
+    $insert=$siparisEkle->execute(array(
+        'kullaniciId' => $_SESSION['oturumId'],
+        'urunId' => $_POST['urunId'],
+        'urunMiktar' => $_POST['urunMiktar'],
+        'urunFiyat' => $_POST['urunFiyat']
+    ));
 
-        $otorumSor=$db->prepare("SELECT * FROM kullanici where kullaniciId=:kullaniciId");
-        $otorumSor->execute(array(
-            'kullaniciId' => $_SESSION['oturumId']
-        ));
+    $siparisSor=$db->prepare("SELECT * FROM siparis WHERE kullaniciId=:kullaniciId");
+    $siparisSor->execute(array(
+        'kullaniciId'=> $_SESSION['oturumId']
+    ));
 
-        $oturumCek=$otorumSor->fetch(PDO::FETCH_ASSOC);
+    $siparisCek=$siparisSor->fetch(PDO::FETCH_ASSOC);
 
-        $urunSor=$db->prepare("SELECT * FROM kullaniciurun
+    $adet=$_POST['urunMiktar'];
+
+
+    $otorumSor=$db->prepare("SELECT * FROM kullanici where kullaniciId=:kullaniciId");
+    $otorumSor->execute(array(
+        'kullaniciId' => $_SESSION['oturumId']
+    ));
+
+    $oturumCek=$otorumSor->fetch(PDO::FETCH_ASSOC);
+
+    $urunSor=$db->prepare("SELECT * FROM kullaniciurun
         LEFT JOIN kullanici ON kullaniciurun.kullaniciId=kullanici.kullaniciId
-        WHERE urunId=:urunId AND kullaniciurunMiktar>0
-        ORDER BY kullaniciurunFiyat ASC");
-        $urunSor->execute(array(
-            'urunId'=> $_POST['urunId']
-        ));
-        $urunCek=$urunSor->fetch(PDO::FETCH_ASSOC);  
-        $say=$urunSor->rowCount();
-        $odenen=0;
-        if ($say>0) {
+        WHERE urunId=:urunId AND kullaniciurunMiktar>=:urunMiktar AND kullaniciurunFiyat=:urunFiyat
+        ORDER BY kullaniciurunFiyat ASC"
+    );
+    $urunSor->execute(array(
+        'urunId'=> $_POST['urunId'],
+        'urunMiktar'=> $adet,
+        'urunFiyat'=> $_POST['urunFiyat']
+    ));
+    $urunCek=$urunSor->fetch(PDO::FETCH_ASSOC);  
+    $say=$urunSor->rowCount();
+    $odenen=0;
+    if ($say>0) {
 
-            $alınabilirAdet=floor($oturumCek['kullaniciPara']/$urunCek['kullaniciurunFiyat']);
-            if ($alınabilirAdet<1) {
-                header("Location:../panel/index.php?durum=yetersiz");
-                break;       
-            }elseif ($alınabilirAdet>$adet) {
+        $sonMiktar=$urunCek['kullaniciurunMiktar']-$adet;
+        $odenen=$adet*$urunCek['kullaniciurunFiyat'];
+        $adet=0;
 
-                if ($urunCek['kullaniciurunMiktar']>=$adet) {
-                    $sonMiktar=$urunCek['kullaniciurunMiktar']-$adet;
-                    $odenen=$adet*$urunCek['kullaniciurunFiyat'];
-                    $adet=0;
-                }else {
-                    $adet=$adet-$urunCek['kullaniciurunMiktar'];
-                    $odenen=$urunCek['kullaniciurunMiktar']*$urunCek['kullaniciurunFiyat'];
-                    $sonMiktar=0;
-                }
 
-            }else {
-                if ($urunCek['kullaniciurunMiktar']>=$alınabilirAdet) {
-                    $sonMiktar=$urunCek['kullaniciurunMiktar']-$alınabilirAdet;
-                    $odenen=$alınabilirAdet*$urunCek['kullaniciurunFiyat'];
-                    $adet=0;
-                }else {
-                    $adet=$alınabilirAdet-$urunCek['kullaniciurunMiktar'];
-                    $odenen=$urunCek['kullaniciurunMiktar']*$urunCek['kullaniciurunFiyat'];
-                    $sonMiktar=0;
-                }
-            }
-
-            $duzenle=$db->prepare("UPDATE kullaniciurun SET
-                kullaniciurunMiktar=:kullaniciurunMiktar
-                WHERE kullaniciurunId={$urunCek['kullaniciurunId']}"
-            );
+        $duzenle=$db->prepare("UPDATE kullaniciurun SET
+            kullaniciurunMiktar=:kullaniciurunMiktar
+            WHERE kullaniciurunId={$urunCek['kullaniciurunId']}"
+        );
         
-            $islem=$duzenle->execute(array(
-                'kullaniciurunMiktar' => $sonMiktar
+        $islem=$duzenle->execute(array(
+            'kullaniciurunMiktar' => $sonMiktar
+        ));
+
+        $duzenle2=$db->prepare("UPDATE siparis SET
+            siparisDurum=:siparisDurum
+            WHERE siparisId={$siparisCek['siparisId']}"
+        );
+        
+        $islem2=$duzenle2->execute(array(
+            'siparisDurum' => 1
+        ));
+
+        if ($islem2) {
+            $muhasebeSor=$db->prepare("SELECT * FROM kullanici where kullaniciYetki=:kullaniciYetki");
+            $muhasebeSor->execute(array(
+                'kullaniciYetki' => 2
+            ));
+            $muhasebeCek=$muhasebeSor->fetch(PDO::FETCH_ASSOC);
+
+            $aliciPara=$oturumCek['kullaniciPara'];
+            $saticiPara=$urunCek['kullaniciPara'];
+            $muhasebePara=$muhasebeCek['kullaniciPara'];
+
+            $muhasebeOneden=($odenen*1/100);
+
+            $sonAliciPara=$aliciPara-$odenen-$muhasebeOneden;
+            $sonSaticiPara=$saticiPara+$odenen;
+            $sonMuhasebePara=$muhasebePara+$muhasebeOneden;
+                
+            $duzenle3=$db->prepare("UPDATE kullanici SET
+                kullaniciPara=:kullaniciPara
+                WHERE kullaniciId={$oturumCek['kullaniciId']}"
+            );
+            
+            $islem3=$duzenle3->execute(array(
+                'kullaniciPara' => $sonAliciPara
             ));
 
-            if ($islem) {
-
-                $aliciPara=$oturumCek['kullaniciPara'];
-                $saticiPara=$urunCek['kullaniciPara'];
-
-                $sonAliciPara=$aliciPara-$odenen;
-                $sonSaticiPara=$saticiPara+$odenen;
-                
-                $duzenle2=$db->prepare("UPDATE kullanici SET
-                    kullaniciPara=:kullaniciPara
-                    WHERE kullaniciId={$oturumCek['kullaniciId']}"
-                );
+            $duzenle4=$db->prepare("UPDATE kullanici SET
+                kullaniciPara=:kullaniciPara
+                WHERE kullaniciId={$urunCek['kullaniciId']}"
+            );
             
-                $islem2=$duzenle2->execute(array(
-                    'kullaniciPara' => $sonAliciPara
-                ));
+            $islem4=$duzenle4->execute(array(
+                'kullaniciPara' => $sonSaticiPara
+            ));
 
-                $duzenle3=$db->prepare("UPDATE kullanici SET
-                    kullaniciPara=:kullaniciPara
-                    WHERE kullaniciId={$urunCek['kullaniciId']}"
-                );
+            $duzenle5=$db->prepare("UPDATE kullanici SET
+                kullaniciPara=:kullaniciPara
+                WHERE kullaniciYetki='2'"
+            );
             
-                $islem3=$duzenle3->execute(array(
-                    'kullaniciPara' => $sonSaticiPara
-                ));
+            $islem5=$duzenle5->execute(array(
+                'kullaniciPara' => $sonMuhasebePara
+            ));
 
-            }else {
+            if($islem5){
+                header("Location:../panel/index.php?durum=alım");
+            } else {
                 header("Location:../panel/index.php?durum=no");
             }
-            
-
-            
 
         }else {
+            header("Location:../panel/index.php?durum=no");
+        }      
 
-            header("Location:../panel/index.php?durum=yetersiz");
-            break;        
-        }
-
-        
-         
-    }
-
-    if($islem3){
-        header("Location:../panel/index.php?durum=ok");
-    } else {
-        header("Location:../panel/index.php?durum=no");
+    }else {
+        header("Location:../panel/index.php?durum=sipariş");      
     }
 
 }
